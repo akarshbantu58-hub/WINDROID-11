@@ -1,8 +1,13 @@
 package com.windroid11
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,65 +31,124 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun WinDroidApp() {
-    var selected by remember { mutableStateOf("Home") }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = remember { context.getSharedPreferences("windroid_setup", 0) }
+    var selectedUri by remember { mutableStateOf(prefs.getString("windows_iso_uri", null)?.let(Uri::parse)) }
+    var selectedName by remember { mutableStateOf(prefs.getString("windows_iso_name", null) ?: "No ISO selected") }
+    var selectedSize by remember { mutableStateOf(prefs.getString("windows_iso_size", "") ?: "") }
+    var message by remember { mutableStateOf("Choose your Windows 11 ARM64 ISO now or later.") }
+
+    val picker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+                var name = "Windows image"
+                var sizeText = "Size unavailable"
+                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                    if (cursor.moveToFirst()) {
+                        if (nameIndex >= 0) name = cursor.getString(nameIndex) ?: name
+                        if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) {
+                            val bytes = cursor.getLong(sizeIndex)
+                            sizeText = String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
+                        }
+                    }
+                }
+                if (!name.lowercase().endsWith(".iso")) {
+                    message = "Please select a file ending in .iso"
+                } else {
+                    selectedUri = uri
+                    selectedName = name
+                    selectedSize = sizeText
+                    prefs.edit()
+                        .putString("windows_iso_uri", uri.toString())
+                        .putString("windows_iso_name", name)
+                        .putString("windows_iso_size", sizeText)
+                        .apply()
+                    message = "ISO selected. VM setup will be available after the QEMU engine is added."
+                }
+            } catch (e: Exception) {
+                message = "Could not keep access to this file. Please select it again."
+            }
+        }
+    }
+
     val blue = Color(0xFF4EA5FF)
     val background = Brush.verticalGradient(
         listOf(Color(0xFF071426), Color(0xFF101E35), Color(0xFF172A45))
     )
     MaterialTheme(colorScheme = darkColorScheme(primary = blue)) {
         Box(Modifier.fillMaxSize().background(background).padding(22.dp)) {
-            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            Column(
+                Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 Text("WinDroid 11", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                 Text("Windows ARM64 virtual machine for Android", color = Color(0xFFB7C8DD), fontSize = 14.sp)
+
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF203B5D)),
                     shape = RoundedCornerShape(22.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("Windows 11 ARM64", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Virtual machine engine not installed yet", color = Color(0xFFFFD18A), fontSize = 13.sp)
-                        Text("This is the app foundation. Windows will not boot until the VM engine and a licensed installation image are added.", color = Color(0xFFD4E1F0), fontSize = 13.sp)
-                        Button(onClick = { selected = "Engine setup" }, modifier = Modifier.fillMaxWidth()) {
-                            Text("VM engine setup")
+                        Text("Installation image", color = Color(0xFFB7C8DD), fontSize = 13.sp)
+                        Text(selectedName, color = Color.White, fontWeight = FontWeight.Medium)
+                        if (selectedSize.isNotBlank()) {
+                            Text(selectedSize, color = Color(0xFFB7C8DD), fontSize = 12.sp)
                         }
+                        Button(
+                            onClick = { picker.launch(arrayOf("application/octet-stream", "application/x-iso9660-image", "*/*")) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (selectedUri == null) "Import Windows ISO" else "Choose another ISO")
+                        }
+                        Text(message, color = Color(0xFFFFD18A), fontSize = 12.sp)
+                        Text(
+                            "The selected file is referenced through Android's file picker. It is not copied into app storage.",
+                            color = Color(0xFFD4E1F0), fontSize = 12.sp
+                        )
                     }
                 }
-                Text("Quick access", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    QuickTile("Display", "Touch-first", Modifier.weight(1f)) { selected = "Display" }
-                    QuickTile("Input", "Touch + optional mouse/keyboard", Modifier.weight(1f)) { selected = "Input" }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    QuickTile("Storage", "Virtual disk", Modifier.weight(1f)) { selected = "Storage" }
-                    QuickTile("Settings", "App settings", Modifier.weight(1f)) { selected = "Settings" }
-                }
-                Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF13243A)), modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("Current status", color = Color.White, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(6.dp))
-                        Text("App foundation: ready", color = Color(0xFF8FE0B0), fontSize = 13.sp)
-                        Text("QEMU engine: pending", color = Color(0xFFFFD18A), fontSize = 13.sp)
-                        Text("Windows image: not added", color = Color(0xFFFFD18A), fontSize = 13.sp)
-                    }
-                }
+
+                Text("Setup progress", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                StatusCard("App foundation", "Ready", Color(0xFF8FE0B0))
+                StatusCard("Windows ISO", if (selectedUri == null) "Waiting for file" else "Selected: $selectedName", if (selectedUri == null) Color(0xFFFFD18A) else Color(0xFF8FE0B0))
+                StatusCard("QEMU virtual machine engine", "Not added yet", Color(0xFFFFD18A))
+                StatusCard("Windows installation", "Not started", Color(0xFFFFD18A))
+
                 Spacer(Modifier.weight(1f))
-                Text("Selected: $selected", color = Color(0xFF9DB2CC), fontSize = 12.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
+                Text(
+                    "Touchscreen-first • Keyboard and mouse optional",
+                    color = Color(0xFF9DB2CC), fontSize = 12.sp,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
             }
         }
     }
 }
 
 @Composable
-private fun QuickTile(title: String, subtitle: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun StatusCard(title: String, status: String, statusColor: Color) {
     Card(
-        modifier = modifier.heightIn(min = 100.dp).clickable { onClick() },
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF203B5D))
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF13243A)),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp)
     ) {
-        Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            Text(title, color = Color.White, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, color = Color(0xFFB7C8DD), fontSize = 12.sp)
+        Row(
+            Modifier.fillMaxWidth().padding(14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(title, color = Color.White, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            Spacer(Modifier.width(8.dp))
+            Text(status, color = statusColor, fontSize = 12.sp)
         }
     }
 }
