@@ -10,145 +10,123 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
+
+private val bg = Color(0xFF081321)
+private val panel = Color(0xFF142941)
+private val blue = Color(0xFF65B9FF)
+private val muted = Color(0xFFA8BCD2)
 
 class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent { WinDroidApp() }
-    }
+ override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); setContent { Windroid() } }
 }
 
 @Composable
-fun WinDroidApp() {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val prefs = remember { context.getSharedPreferences("windroid_setup", 0) }
-    var selectedUri by remember { mutableStateOf(prefs.getString("windows_iso_uri", null)?.let(Uri::parse)) }
-    var selectedName by remember { mutableStateOf(prefs.getString("windows_iso_name", null) ?: "No ISO selected") }
-    var selectedSize by remember { mutableStateOf(prefs.getString("windows_iso_size", "") ?: "") }
-    var message by remember { mutableStateOf("Choose your Windows 11 ARM64 ISO now or later.") }
+fun Windroid() {
+ val ctx = androidx.compose.ui.platform.LocalContext.current
+ val prefs = remember { ctx.getSharedPreferences("windroid_setup", 0) }
+ var uri by remember { mutableStateOf(prefs.getString("windows_iso_uri", null)?.let(Uri::parse)) }
+ var fileName by remember { mutableStateOf(prefs.getString("windows_iso_name", "No ISO selected") ?: "No ISO selected") }
+ var fileSize by remember { mutableStateOf(prefs.getString("windows_iso_size", "") ?: "") }
+ var notice by remember { mutableStateOf("Choose your Windows 11 ARM64 ISO now or later.") }
+ var tab by remember { mutableStateOf("Home") }
+ var keyboard by remember { mutableStateOf(true) }
+ var mouse by remember { mutableStateOf(true) }
+ var fit by remember { mutableStateOf(true) }
+ var haptics by remember { mutableStateOf(false) }
+ var resolution by remember { mutableStateOf(prefs.getString("resolution", "1280 × 800") ?: "1280 × 800") }
+ var ram by remember { mutableStateOf(prefs.getString("ram", "1.5 GB") ?: "1.5 GB") }
+ var typed by remember { mutableStateOf("") }
 
-    val picker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            try {
-                context.contentResolver.takePersistableUriPermission(
-                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
-                var name = "Windows image"
-                var sizeText = "Size unavailable"
-                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                    val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
-                    if (cursor.moveToFirst()) {
-                        if (nameIndex >= 0) name = cursor.getString(nameIndex) ?: name
-                        if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) {
-                            val bytes = cursor.getLong(sizeIndex)
-                            sizeText = String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
-                        }
-                    }
-                }
-                if (!name.lowercase().endsWith(".iso")) {
-                    message = "Please select a file ending in .iso"
-                } else {
-                    selectedUri = uri
-                    selectedName = name
-                    selectedSize = sizeText
-                    prefs.edit()
-                        .putString("windows_iso_uri", uri.toString())
-                        .putString("windows_iso_name", name)
-                        .putString("windows_iso_size", sizeText)
-                        .apply()
-                    message = "ISO selected. VM setup will be available after the QEMU engine is added."
-                }
-            } catch (e: Exception) {
-                message = "Could not keep access to this file. Please select it again."
-            }
-        }
+ val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { u ->
+  if (u != null) try {
+   ctx.contentResolver.takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+   var n = "Windows image"; var s = ""
+   ctx.contentResolver.query(u, null, null, null, null)?.use { c ->
+    val ni=c.getColumnIndex(OpenableColumns.DISPLAY_NAME); val si=c.getColumnIndex(OpenableColumns.SIZE)
+    if(c.moveToFirst()){ if(ni>=0)n=c.getString(ni)?:n; if(si>=0&&!c.isNull(si))s=String.format("%.2f GB",c.getLong(si)/1073741824.0) }
+   }
+   if(!n.lowercase().endsWith(".iso")) notice="Please select a .iso file."
+   else { uri=u; fileName=n; fileSize=s; prefs.edit().putString("windows_iso_uri",u.toString()).putString("windows_iso_name",n).putString("windows_iso_size",s).apply(); notice="ISO reference saved. VM engine is still required before installation." }
+  } catch (_:Exception) { notice="Could not save file access. Please select it again." }
+ }
+
+ MaterialTheme(colorScheme=darkColorScheme(primary=blue, background=bg, surface=panel)) {
+  Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(bg,Color(0xFF10243A),Color(0xFF183552))))) {
+   Row(Modifier.fillMaxWidth().padding(20.dp),verticalAlignment=Alignment.CenterVertically) {
+    Column(Modifier.weight(1f)){ Text("WINDROID",color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=3.sp); Text("11",color=Color.White,fontSize=32.sp,fontWeight=FontWeight.ExtraBold) }
+    Text("ARM64  •  TOUCH PC",color=blue,fontSize=10.sp,fontWeight=FontWeight.Bold)
+   }
+   Row(Modifier.fillMaxWidth().padding(horizontal=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+    listOf("Home","Controls","Settings").forEach { t ->
+     Surface(color=if(tab==t)blue.copy(alpha=.18f) else panel,shape=RoundedCornerShape(12.dp),modifier=Modifier.weight(1f).clickable{tab=t}) { Text(t,color=if(tab==t)blue else muted,fontWeight=FontWeight.SemiBold,modifier=Modifier.padding(13.dp)) }
     }
-
-    val blue = Color(0xFF4EA5FF)
-    val background = Brush.verticalGradient(
-        listOf(Color(0xFF071426), Color(0xFF101E35), Color(0xFF172A45))
-    )
-    MaterialTheme(colorScheme = darkColorScheme(primary = blue)) {
-        Box(Modifier.fillMaxSize().background(background).padding(22.dp)) {
-            Column(
-                Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text("WinDroid 11", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-                Text("Windows ARM64 virtual machine for Android", color = Color(0xFFB7C8DD), fontSize = 14.sp)
-
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF203B5D)),
-                    shape = RoundedCornerShape(22.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Windows 11 ARM64", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Installation image", color = Color(0xFFB7C8DD), fontSize = 13.sp)
-                        Text(selectedName, color = Color.White, fontWeight = FontWeight.Medium)
-                        if (selectedSize.isNotBlank()) {
-                            Text(selectedSize, color = Color(0xFFB7C8DD), fontSize = 12.sp)
-                        }
-                        Button(
-                            onClick = { picker.launch(arrayOf("application/octet-stream", "application/x-iso9660-image", "*/*")) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(if (selectedUri == null) "Import Windows ISO" else "Choose another ISO")
-                        }
-                        Text(message, color = Color(0xFFFFD18A), fontSize = 12.sp)
-                        Text(
-                            "The selected file is referenced through Android's file picker. It is not copied into app storage.",
-                            color = Color(0xFFD4E1F0), fontSize = 12.sp
-                        )
-                    }
-                }
-
-                Text("Setup progress", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                StatusCard("App foundation", "Ready", Color(0xFF8FE0B0))
-                StatusCard("Windows ISO", if (selectedUri == null) "Waiting for file" else "Selected: $selectedName", if (selectedUri == null) Color(0xFFFFD18A) else Color(0xFF8FE0B0))
-                StatusCard("QEMU virtual machine engine", "Not added yet", Color(0xFFFFD18A))
-                StatusCard("Windows installation", "Not started", Color(0xFFFFD18A))
-
-                Spacer(Modifier.weight(1f))
-                Text(
-                    "Touchscreen-first • Keyboard and mouse optional",
-                    color = Color(0xFF9DB2CC), fontSize = 12.sp,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
-            }
-        }
+   }
+   when(tab) {
+    "Home" -> LazyColumn(Modifier.weight(1f).padding(16.dp),verticalArrangement=Arrangement.spacedBy(13.dp)) {
+     item { Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF1B3B5A)),shape=RoundedCornerShape(22.dp)){ Column(Modifier.padding(20.dp)){ Text("YOUR PC. REIMAGINED.",color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Bold); Text("A touchscreen-first Windows ARM64 virtual machine.",color=muted,fontSize=12.sp); Spacer(Modifier.height(12.dp)); Text("GEN-PC KEYBOARD  •  VIRTUAL MOUSE  •  PC SETTINGS",color=blue,fontSize=10.sp) } } }
+     item { InfoCard("WINDOWS 11 ARM64 ISO",fileName+(if(fileSize.isNotBlank())"  •  $fileSize" else "")){ Button(onClick={filePicker.launch(arrayOf("application/octet-stream","application/x-iso9660-image","*/*"))},modifier=Modifier.fillMaxWidth()){Text(if(uri==null)"Choose ISO file" else "Change ISO file")} ; Text(notice,color=Color(0xFFFFD28B),fontSize=11.sp); Text("File is linked, not copied into internal storage. Add it later when ready.",color=muted,fontSize=10.sp) } }
+     item { InfoCard("SYSTEM STATUS","App interface: READY\nISO: "+if(uri==null)"NOT ADDED" else "LINKED"+"\nQEMU engine: NOT INTEGRATED\nWindows VM: NOT STARTED") { } }
+     item { Text("The mouse, keyboard and settings screens are prepared as UI. They will control Windows after the QEMU input bridge is implemented.",color=muted,fontSize=11.sp) }
     }
+    "Controls" -> LazyColumn(Modifier.weight(1f).padding(14.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+     item { InfoCard("VIRTUAL MOUSE / TOUCHPAD","Drag inside the pad to move the on-screen pointer.") {
+      TouchPad()
+      Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){ Button(onClick={},modifier=Modifier.weight(1f)){Text("LEFT CLICK")}; OutlinedButton(onClick={},modifier=Modifier.weight(1f)){Text("RIGHT CLICK")} }
+      Text("Pointer and click events are a preview until connected to QEMU.",color=muted,fontSize=10.sp)
+     } }
+     item { InfoCard("GEN-PC KEYBOARD","Full-width touch keyboard with PC modifier keys.") {
+      BasicTextField(value=typed,onValueChange={typed=it},textStyle=TextStyle(color=Color.White,fontSize=14.sp),modifier=Modifier.fillMaxWidth().background(bg,RoundedCornerShape(8.dp)).padding(10.dp),decorationBox={inner->if(typed.isEmpty())Text("Input preview…",color=muted);inner()})
+      GenKeyboard { key -> typed=when(key){"BACK"->typed.dropLast(1);"SPACE"->typed+" ";"ENTER"->typed+"\n";"CLEAR"->"";else->typed+key} }
+      Text("Keyboard preview only. Key events will be sent to Windows after VM integration.",color=muted,fontSize=10.sp)
+     } }
+     item { Row(verticalAlignment=Alignment.CenterVertically){Text("Enable virtual mouse",color=Color.White,modifier=Modifier.weight(1f));Switch(mouse,{mouse=it})}; Row(verticalAlignment=Alignment.CenterVertically){Text("Show keyboard",color=Color.White,modifier=Modifier.weight(1f));Switch(keyboard,{keyboard=it})} }
+    }
+    else -> LazyColumn(Modifier.weight(1f).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+     item { Text("PC SETTINGS",color=blue,fontSize=12.sp,fontWeight=FontWeight.Bold,letterSpacing=2.sp) }
+     item { InfoCard("DISPLAY RESOLUTION","Choose the planned Windows desktop size.") { listOf("960 × 600","1280 × 800","1366 × 768").forEach{v->Row(verticalAlignment=Alignment.CenterVertically,modifier=Modifier.fillMaxWidth().clickable{resolution=v;prefs.edit().putString("resolution",v).apply()}){RadioButton(resolution==v,{resolution=v;prefs.edit().putString("resolution",v).apply()});Text(v,color=Color.White)}} } }
+     item { InfoCard("VIRTUAL MEMORY","Low memory settings for a 4 GB tablet.") { listOf("1 GB","1.5 GB","2 GB").forEach{v->Row(verticalAlignment=Alignment.CenterVertically,modifier=Modifier.fillMaxWidth().clickable{ram=v;prefs.edit().putString("ram",v).apply()}){RadioButton(ram==v,{ram=v;prefs.edit().putString("ram",v).apply()});Text(v,color=Color.White)}};Text("Saved preference only. Actual VM memory is not allocated yet.",color=muted,fontSize=10.sp) } }
+     item { Toggle("Fit Windows screen to tablet", "Scale guest display to available screen",fit){fit=it} }
+     item { Toggle("Touch feedback", "Haptic feedback for touch controls",haptics){haptics=it} }
+     item { Toggle("Virtual mouse", "Enable touchpad controls",mouse){mouse=it} }
+     item { InfoCard("ABOUT","WinDroid 11 • UI foundation\nISO picker • Mouse UI • Gen-PC keyboard • Settings\nQEMU engine and Windows boot are not implemented yet."){} }
+    }
+   }
+   Text("WIN DROID 11  •  ANDROID HOST",color=Color(0xFF6F8CA9),fontSize=9.sp,modifier=Modifier.align(Alignment.CenterHorizontally).padding(9.dp))
+  }
+ }
 }
 
-@Composable
-private fun StatusCard(title: String, status: String, statusColor: Color) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF13243A)),
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp)
-    ) {
-        Row(
-            Modifier.fillMaxWidth().padding(14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(title, color = Color.White, fontSize = 13.sp, modifier = Modifier.weight(1f))
-            Spacer(Modifier.width(8.dp))
-            Text(status, color = statusColor, fontSize = 12.sp)
-        }
-    }
+@Composable private fun InfoCard(title:String,subtitle:String,content:@Composable ColumnScope.()->Unit) {
+ Card(colors=CardDefaults.cardColors(containerColor=panel),shape=RoundedCornerShape(18.dp)){Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){Text(title,color=blue,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.sp);Text(subtitle,color=Color.White,fontSize=13.sp);content()}}
+}
+@Composable private fun Toggle(title:String,sub:String,value:Boolean,onChange:(Boolean)->Unit){InfoCard(title,sub){Switch(value,onChange)}}
+@Composable private fun TouchPad(){
+ var p by remember{mutableStateOf(androidx.compose.ui.geometry.Offset(.5f,.5f))}
+ Box(Modifier.fillMaxWidth().height(170.dp).background(bg,RoundedCornerShape(14.dp)).pointerInput(Unit){detectDragGestures{c,d->c.consume();p=androidx.compose.ui.geometry.Offset((p.x+d.x/size.width).coerceIn(.05f,.95f),(p.y+d.y/size.height).coerceIn(.08f,.92f))}}){
+  Text("DRAG TO MOVE",color=muted,fontSize=10.sp,modifier=Modifier.align(Alignment.TopCenter).padding(10.dp))
+  Box(Modifier.offset{IntOffset((p.x*size.width).roundToInt()-8,(p.y*size.height).roundToInt()-8)}.size(16.dp).background(blue,RoundedCornerShape(50)))
+  Text("TRACKPAD AREA",color=Color(0xFF58728E),fontSize=9.sp,modifier=Modifier.align(Alignment.BottomCenter).padding(8.dp))
+ }
+}
+@Composable private fun GenKeyboard(onKey:(String)->Unit){
+ val rows=listOf(listOf("ESC","1","2","3","4","5","6","7","8","9","0","BACK"),listOf("TAB","Q","W","E","R","T","Y","U","I","O","P"),listOf("CAPS","A","S","D","F","G","H","J","K","L","ENTER"),listOf("SHIFT","Z","X","C","V","B","N","M",",",".","SHIFT"),listOf("CTRL","FN","ALT","SPACE","ALT","←","↓","↑","→"))
+ Column(verticalArrangement=Arrangement.spacedBy(4.dp)){rows.forEach{r->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(3.dp)){r.forEach{k->Surface(color=if(k in listOf("SPACE","ENTER","SHIFT","CTRL","ALT","TAB","BACK"))Color(0xFF315273) else Color(0xFF203A55),shape=RoundedCornerShape(5.dp),modifier=Modifier.weight(if(k=="SPACE")2.7f else if(k.length>1)1.25f else 1f).height(35.dp).clickable{onKey(when(k){"BACK"->"BACK";"SPACE"->"SPACE";"ENTER"->"ENTER";else->if(k.length==1)k.lowercase() else ""})}){Box(contentAlignment=Alignment.Center){Text(k,color=Color.White,fontSize=if(k.length>3)8.sp else 10.sp,fontWeight=FontWeight.SemiBold)}}}}};OutlinedButton(onClick={onKey("CLEAR")},modifier=Modifier.fillMaxWidth()){Text("CLEAR INPUT PREVIEW")} }
 }
