@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -119,7 +120,7 @@ fun Windroid() {
       Text("HIDE  ×",color=muted,fontSize=11.sp,modifier=Modifier.clickable{keyboardExpanded=false}.padding(6.dp))
      }
      BasicTextField(value=typed,onValueChange={typed=it},textStyle=TextStyle(color=Color.White,fontSize=13.sp),modifier=Modifier.fillMaxWidth().background(bg,RoundedCornerShape(8.dp)).padding(9.dp),decorationBox={inner->if(typed.isEmpty())Text("Input preview…",color=muted);inner()})
-     GenKeyboard { key -> typed=when(key){"BACK"->typed.dropLast(1);"SPACE"->typed+" ";"ENTER"->typed+"\\n";"CLEAR"->"";else->typed+key} }
+     GenKeyboard { key -> typed=when(key){"BACK"->typed.dropLast(1);"SPACE"->typed+" ";"ENTER"->typed+"\n";"CLEAR"->"";else->typed+key} }
      Text("Preview only • Windows input bridge comes later",color=muted,fontSize=9.sp)
     }
    }
@@ -136,9 +137,9 @@ fun Windroid() {
 @Composable private fun Toggle(title:String,sub:String,value:Boolean,onChange:(Boolean)->Unit){InfoCard(title,sub){Switch(value,onChange)}}
 @Composable private fun TouchPad(){
  var p by remember{mutableStateOf(androidx.compose.ui.geometry.Offset(.5f,.5f))}
- Box(Modifier.fillMaxWidth().height(170.dp).background(bg,RoundedCornerShape(14.dp)).pointerInput(Unit){detectDragGestures{c,d->c.consume();p=androidx.compose.ui.geometry.Offset((p.x+d.x/size.width).coerceIn(.05f,.95f),(p.y+d.y/size.height).coerceIn(.08f,.92f))}}){
+ BoxWithConstraints(Modifier.fillMaxWidth().height(170.dp).background(bg,RoundedCornerShape(14.dp)).pointerInput(Unit){detectDragGestures{change,drag->change.consume();p=androidx.compose.ui.geometry.Offset((p.x+drag.x/constraints.maxWidth).coerceIn(.05f,.95f),(p.y+drag.y/constraints.maxHeight).coerceIn(.08f,.92f))}}){
   Text("DRAG TO MOVE",color=muted,fontSize=10.sp,modifier=Modifier.align(Alignment.TopCenter).padding(10.dp))
-  Box(Modifier.offset{IntOffset((p.x*size.width).roundToInt()-8,(p.y*size.height).roundToInt()-8)}.size(16.dp).background(blue,RoundedCornerShape(50)))
+  Box(Modifier.offset(x=maxWidth*p.x-8.dp,y=maxHeight*p.y-8.dp).size(16.dp).background(blue,RoundedCornerShape(50)))
   Text("TRACKPAD AREA",color=Color(0xFF58728E),fontSize=9.sp,modifier=Modifier.align(Alignment.BottomCenter).padding(8.dp))
  }
 }
