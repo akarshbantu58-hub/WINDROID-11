@@ -1,31 +1,35 @@
-# WinDroid 11
+# WinDroid 11 — VM backend preparation
 
-An Android application project intended to host a Windows 11 ARM64 virtual machine.
+## Current milestone
 
-## Current stage
+The Android app currently provides the touchscreen-first UI, persistent document-picker access to a selected ISO, a floating expandable keyboard preview, and a touchpad pointer preview.
 
-Step 1: Android project foundation.
+**Important:** the current app does not include QEMU, UEFI firmware, a virtual disk controller, or a running Windows guest. The keyboard and mouse are not yet connected to a guest OS. The VM configuration class is only a typed configuration model.
 
-Included:
-- Kotlin and Jetpack Compose application
-- Touch-first starter interface
-- Optional Android-connected mouse and keyboard input planned
-- GitHub Actions debug APK workflow
+## Five development milestones
 
-Not yet included:
-- QEMU system emulator binary or Android integration
-- Virtual machine hardware configuration
-- UEFI firmware and virtual TPM
-- Windows installation media or virtual disk
+1. **Stabilize Android shell** — verify Compose build, persistent ISO URI access, floating keyboard overlay, and touchpad layout.
+2. **Validate guest image** — identify whether the supplied ISO is Windows ARM64 or x64. A 3 GB file size does not reveal its CPU architecture. Windows ARM64 requires an ARM64 guest path; x64 requires a different emulation path.
+3. **Select and integrate an Android-compatible VM engine** — evaluate QEMU user-mode/TCG and available host acceleration. Do not assume KVM is available on every Android device. Keep engine licensing and native ABI requirements documented.
+4. **Create VM storage and firmware layer** — implement a user-selected virtual disk location, firmware boot configuration, and safe start/stop lifecycle. Do not silently create a large disk in internal storage.
+5. **Connect input and display** — route keyboard scan/key events and touchpad pointer/button events to the VM; then test guest display scaling and lifecycle.
 
-The current app is only a foundation UI; it does not boot Windows yet.
+## Tablet resource limits
 
-## Build
+This project targets Android tablets with limited memory. Start with a conservative 1 GB guest-memory test only if the engine and Windows image permit it. A 1.5–2 GB Windows guest on a 4 GB Android device can cause severe memory pressure, slowdowns, or app termination. The settings screen currently saves preferences only; it does not reserve RAM.
 
-Run the GitHub Actions workflow named **Build WinDroid 11 APK**, or build locally with JDK 17 and Gradle 8.9.
+## ISO and storage
 
-The debug APK is created at app/build/outputs/apk/debug/app-debug.apk.
+Use Android's Storage Access Framework document URI. Keep the original ISO in user-selected external/shared storage when possible; do not copy it into app-private storage. Persisted URI permission can be revoked by Android or the user, so handle missing access gracefully.
 
-## Important
+## Current status
 
-Windows installation media must be obtained from Microsoft and used in accordance with its license. VM performance depends on the Android device's memory, CPU and available virtualization support.
+- [x] Touchscreen UI foundation
+- [x] Persistent ISO file selection reference
+- [x] Floating expandable on-screen keyboard preview
+- [x] Touchpad pointer preview
+- [x] VM configuration data model
+- [ ] QEMU/native VM engine
+- [ ] Firmware and virtual disk
+- [ ] Real guest input bridge
+- [ ] Windows boot/install verification
