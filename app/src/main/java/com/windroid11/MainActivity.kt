@@ -47,7 +47,8 @@ fun Windroid() {
  var fileSize by remember { mutableStateOf(prefs.getString("windows_iso_size", "") ?: "") }
  var notice by remember { mutableStateOf("Choose your Windows 11 ARM64 ISO now or later.") }
  var tab by remember { mutableStateOf("Home") }
- var keyboard by remember { mutableStateOf(true) }
+ var keyboardEnabled by remember { mutableStateOf(true) }
+ var keyboardExpanded by remember { mutableStateOf(false) }
  var mouse by remember { mutableStateOf(true) }
  var fit by remember { mutableStateOf(true) }
  var haptics by remember { mutableStateOf(false) }
@@ -69,7 +70,8 @@ fun Windroid() {
  }
 
  MaterialTheme(colorScheme=darkColorScheme(primary=blue, background=bg, surface=panel)) {
-  Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(bg,Color(0xFF10243A),Color(0xFF183552))))) {
+  Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(bg,Color(0xFF10243A),Color(0xFF183552))))) {
+  Column(Modifier.fillMaxSize()) {
    Row(Modifier.fillMaxWidth().padding(20.dp),verticalAlignment=Alignment.CenterVertically) {
     Column(Modifier.weight(1f)){ Text("WINDROID",color=muted,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=3.sp); Text("11",color=Color.White,fontSize=32.sp,fontWeight=FontWeight.ExtraBold) }
     Text("ARM64  •  TOUCH PC",color=blue,fontSize=10.sp,fontWeight=FontWeight.Bold)
@@ -92,12 +94,10 @@ fun Windroid() {
       Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){ Button(onClick={},modifier=Modifier.weight(1f)){Text("LEFT CLICK")}; OutlinedButton(onClick={},modifier=Modifier.weight(1f)){Text("RIGHT CLICK")} }
       Text("Pointer and click events are a preview until connected to QEMU.",color=muted,fontSize=10.sp)
      } }
-     item { InfoCard("GEN-PC KEYBOARD","Full-width touch keyboard with PC modifier keys.") {
-      BasicTextField(value=typed,onValueChange={typed=it},textStyle=TextStyle(color=Color.White,fontSize=14.sp),modifier=Modifier.fillMaxWidth().background(bg,RoundedCornerShape(8.dp)).padding(10.dp),decorationBox={inner->if(typed.isEmpty())Text("Input preview…",color=muted);inner()})
-      GenKeyboard { key -> typed=when(key){"BACK"->typed.dropLast(1);"SPACE"->typed+" ";"ENTER"->typed+"\n";"CLEAR"->"";else->typed+key} }
-      Text("Keyboard preview only. Key events will be sent to Windows after VM integration.",color=muted,fontSize=10.sp)
+     item { InfoCard("GEN-PC KEYBOARD","Tap the floating keyboard button at the bottom-right to unfold or hide it.") {
+      Text("Preview only. Actual Windows key input will be connected after VM engine integration.",color=muted,fontSize=10.sp)
      } }
-     item { Row(verticalAlignment=Alignment.CenterVertically){Text("Enable virtual mouse",color=Color.White,modifier=Modifier.weight(1f));Switch(mouse,{mouse=it})}; Row(verticalAlignment=Alignment.CenterVertically){Text("Show keyboard",color=Color.White,modifier=Modifier.weight(1f));Switch(keyboard,{keyboard=it})} }
+     item { Row(verticalAlignment=Alignment.CenterVertically){Text("Enable virtual mouse",color=Color.White,modifier=Modifier.weight(1f));Switch(mouse,{mouse=it})}; Row(verticalAlignment=Alignment.CenterVertically){Text("Show keyboard",color=Color.White,modifier=Modifier.weight(1f));Switch(keyboardEnabled,{keyboardEnabled=it; if(!it) keyboardExpanded=false})} }
     }
     else -> LazyColumn(Modifier.weight(1f).padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
      item { Text("PC SETTINGS",color=blue,fontSize=12.sp,fontWeight=FontWeight.Bold,letterSpacing=2.sp) }
@@ -110,6 +110,22 @@ fun Windroid() {
     }
    }
    Text("WIN DROID 11  •  ANDROID HOST",color=Color(0xFF6F8CA9),fontSize=9.sp,modifier=Modifier.align(Alignment.CenterHorizontally).padding(9.dp))
+  }
+  if (keyboardExpanded && keyboardEnabled) {
+   Surface(modifier=Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal=8.dp,bottom=78.dp),color=Color(0xF0142941),shape=RoundedCornerShape(18.dp),shadowElevation=12.dp) {
+    Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(7.dp)) {
+     Row(verticalAlignment=Alignment.CenterVertically) {
+      Text("GEN-PC KEYBOARD",color=blue,fontSize=10.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
+      Text("HIDE  ×",color=muted,fontSize=11.sp,modifier=Modifier.clickable{keyboardExpanded=false}.padding(6.dp))
+     }
+     BasicTextField(value=typed,onValueChange={typed=it},textStyle=TextStyle(color=Color.White,fontSize=13.sp),modifier=Modifier.fillMaxWidth().background(bg,RoundedCornerShape(8.dp)).padding(9.dp),decorationBox={inner->if(typed.isEmpty())Text("Input preview…",color=muted);inner()})
+     GenKeyboard { key -> typed=when(key){"BACK"->typed.dropLast(1);"SPACE"->typed+" ";"ENTER"->typed+"\\n";"CLEAR"->"";else->typed+key} }
+     Text("Preview only • Windows input bridge comes later",color=muted,fontSize=9.sp)
+    }
+   }
+  }
+  SmallFloatingActionButton(onClick={if(keyboardEnabled) keyboardExpanded=!keyboardExpanded},modifier=Modifier.align(Alignment.BottomEnd).padding(14.dp),containerColor=if(keyboardExpanded)blue else Color(0xFF315273),contentColor=Color.White) {
+   Text(if(keyboardExpanded) "×" else "⌨",fontSize=20.sp,fontWeight=FontWeight.Bold)
   }
  }
 }
