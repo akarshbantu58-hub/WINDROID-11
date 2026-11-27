@@ -40,7 +40,10 @@ fetch_extract() {
 }
 
 # Versions and patches are pinned to the QubeVM source revision recorded in this repo.
-fetch_extract "https://download.qemu.org/qemu-11.1.3.tar.xz" "qemu-11.1.3.tar.xz" "qemu"
+if [[ ! -d qemu ]]; then
+  fetch_extract "https://download.qemu.org/qemu-11.1.3.tar.xz" "qemu-11.1.3.tar.xz" "qemu-11.1.3"
+  mv qemu-11.1.3 qemu
+fi
 if [[ ! -d glib ]]; then
   fetch_extract "https://download.gnome.org/sources/glib/2.88/glib-2.90.1.tar.xz" "glib-2.90.1.tar.xz" "glib-2.90.1"
   mv glib-2.90.1 glib
