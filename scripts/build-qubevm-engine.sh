@@ -48,8 +48,10 @@ if [[ ! -d glib ]]; then
   fetch_extract "https://download.gnome.org/sources/glib/2.88/glib-2.90.1.tar.xz" "glib-2.90.1.tar.xz" "glib-2.90.1"
   mv glib-2.90.1 glib
 fi
-fetch_extract "https://github.com/libffi/libffi/releases/download/v3.8.0/libffi-3.8.0.tar.gz" "libffi-3.8.0.tar.gz" "libffi-3.8.0"
-if [[ -d libffi-3.8.0 ]]; then mv libffi-3.8.0 libffi; fi
+if [[ ! -d libffi ]]; then
+  fetch_extract "https://github.com/libffi/libffi/releases/download/v3.8.0/libffi-3.8.0.tar.gz" "libffi-3.8.0.tar.gz" "libffi-3.8.0"
+  mv libffi-3.8.0 libffi
+fi
 if [[ ! -d pixman ]]; then
   fetch_extract "https://gitlab.freedesktop.org/pixman/pixman/-/archive/pixman-0.46.4/pixman-pixman-0.46.4.tar.gz" "pixman-0.46.4.tar.gz" "pixman-pixman-0.46.4"
   mv pixman-pixman-0.46.4 pixman
