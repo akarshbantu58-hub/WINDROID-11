@@ -27,7 +27,7 @@ jobs:
         with:
           accept-android-sdk-licenses: true
           log-accepted-android-sdk-licenses: false
-          packages: 'platforms;android-37 build-tools;37.0.0 ndk;30.0.16248370'
+          packages: 'ndk;30.0.16248370'
       - name: Install QEMU native build tools
         run: |
           sudo apt-get update
@@ -35,9 +35,10 @@ jobs:
           python3 -m pip install --break-system-packages --upgrade meson mako
       - name: Build QubeVM QEMU engine for ARM64 Android
         env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/30.0.16248370
           BUILD_THREADS: '2'
-        run: bash scripts/build-qubevm-engine.sh
+        run: |
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/30.0.16248370"
+          bash scripts/build-qubevm-engine.sh
       - name: Upload native engine and firmware
         uses: actions/upload-artifact@v4
         with:
