@@ -56,6 +56,10 @@ fun Windroid() {
  var resolution by remember { mutableStateOf(prefs.getString("resolution", "1280 × 800") ?: "1280 × 800") }
  var ram by remember { mutableStateOf(prefs.getString("ram", "1.5 GB") ?: "1.5 GB") }
  var typed by remember { mutableStateOf("") }
+ var keyboardScale by remember { mutableFloatStateOf(1f) }
+ var keyboardX by remember { mutableIntStateOf(0) }
+ var keyboardY by remember { mutableIntStateOf(0) }
+ var modifierPreview by remember { mutableStateOf(setOf<String>()) }
 
  val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { u ->
   if (u != null) try {
@@ -85,6 +89,7 @@ fun Windroid() {
    when(tab) {
     "Home" -> LazyColumn(Modifier.weight(1f).padding(16.dp),verticalArrangement=Arrangement.spacedBy(13.dp)) {
      item { Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF1B3B5A)),shape=RoundedCornerShape(22.dp)){ Column(Modifier.padding(20.dp)){ Text("YOUR PC. REIMAGINED.",color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Bold); Text("A touchscreen-first Windows ARM64 virtual machine.",color=muted,fontSize=12.sp); Spacer(Modifier.height(12.dp)); Text("GEN-PC KEYBOARD  •  VIRTUAL MOUSE  •  PC SETTINGS",color=blue,fontSize=10.sp) } } }
+     item { InfoCard("PC POWER", "QEMU engine is not packaged in this build yet.") { Button(onClick={notice=if(uri==null) "Choose your Windows ISO first." else "ISO saved: $fileName. QEMU native engine is not yet packaged, so Windows cannot boot in this build."},modifier=Modifier.fillMaxWidth(),enabled=uri!=null){Text("BOOT PC")} ; Text("Boot will activate after QEMU, firmware and the ISO architecture are integrated and tested.",color=muted,fontSize=10.sp) } }
      item { InfoCard("WINDOWS 11 ARM64 ISO",fileName+(if(fileSize.isNotBlank())"  •  $fileSize" else "")){ Button(onClick={filePicker.launch(arrayOf("application/octet-stream","application/x-iso9660-image","*/*"))},modifier=Modifier.fillMaxWidth()){Text(if(uri==null)"Choose ISO file" else "Change ISO file")} ; Text(notice,color=Color(0xFFFFD28B),fontSize=11.sp); Text("File is linked, not copied into internal storage. Add it later when ready.",color=muted,fontSize=10.sp) } }
      item { InfoCard("SYSTEM STATUS","App interface: READY\nISO: "+if(uri==null)"NOT ADDED" else "LINKED"+"\nQEMU engine: NOT INTEGRATED\nWindows VM: NOT STARTED") { } }
      item { Text("The mouse, keyboard and settings screens are prepared as UI. They will control Windows after the QEMU input bridge is implemented.",color=muted,fontSize=11.sp) }
@@ -113,14 +118,18 @@ fun Windroid() {
    Text("WIN DROID 11  •  ANDROID HOST",color=Color(0xFF6F8CA9),fontSize=9.sp,modifier=Modifier.align(Alignment.CenterHorizontally).padding(9.dp))
   }
   if (keyboardExpanded && keyboardEnabled) {
-   Surface(modifier=Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start=8.dp,end=8.dp,bottom=78.dp),color=Color(0xF0142941),shape=RoundedCornerShape(18.dp),shadowElevation=12.dp) {
+   Surface(modifier=Modifier.align(Alignment.BottomCenter).fillMaxWidth(keyboardScale).offset { IntOffset(keyboardX,keyboardY) }.padding(start=8.dp,end=8.dp,bottom=78.dp),color=Color(0xF0142941),shape=RoundedCornerShape(18.dp),shadowElevation=12.dp) {
     Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(7.dp)) {
      Row(verticalAlignment=Alignment.CenterVertically) {
-      Text("GEN-PC KEYBOARD",color=blue,fontSize=10.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
+      Text("MOVE",color=blue,fontSize=9.sp,modifier=Modifier.weight(1f).pointerInput(Unit){detectDragGestures{change,drag->change.consume();keyboardX+=drag.x.roundToInt();keyboardY+=drag.y.roundToInt()}})
+      Text("GEN-PC KEYBOARD",color=blue,fontSize=10.sp,fontWeight=FontWeight.Bold)
       Text("HIDE  ×",color=muted,fontSize=11.sp,modifier=Modifier.clickable{keyboardExpanded=false}.padding(6.dp))
      }
      BasicTextField(value=typed,onValueChange={typed=it},textStyle=TextStyle(color=Color.White,fontSize=13.sp),modifier=Modifier.fillMaxWidth().background(bg,RoundedCornerShape(8.dp)).padding(9.dp),decorationBox={inner->if(typed.isEmpty())Text("Input preview…",color=muted);inner()})
-     GenKeyboard { key -> typed=when(key){"BACK"->typed.dropLast(1);"SPACE"->typed+" ";"ENTER"->typed+"\n";"CLEAR"->"";else->typed+key} }
+     Text("Keyboard width",color=muted,fontSize=10.sp)
+     Slider(value=keyboardScale,onValueChange={keyboardScale=it},valueRange=.65f..1f)
+     Text("Modifier preview: "+if(modifierPreview.isEmpty())"none" else modifierPreview.joinToString(" + "),color=blue,fontSize=10.sp)
+     GenKeyboard(modifierPreview=modifierPreview,onKey={ key -> if(key in setOf("CTRL","ALT","SHIFT","WIN")) modifierPreview=if(key in modifierPreview) modifierPreview-key else modifierPreview+key else { typed=when(key){"BACK"->typed.dropLast(1);"SPACE"->typed+" ";"ENTER"->typed+"\n";"CLEAR"->"";else->typed+key}; modifierPreview=emptySet() } })
      Text("Preview only • Windows input bridge comes later",color=muted,fontSize=9.sp)
     }
    }
@@ -145,7 +154,7 @@ fun Windroid() {
   Text("TRACKPAD AREA",color=Color(0xFF58728E),fontSize=9.sp,modifier=Modifier.align(Alignment.BottomCenter).padding(8.dp))
  }
 }
-@Composable private fun GenKeyboard(onKey:(String)->Unit){
- val rows=listOf(listOf("ESC","1","2","3","4","5","6","7","8","9","0","BACK"),listOf("TAB","Q","W","E","R","T","Y","U","I","O","P"),listOf("CAPS","A","S","D","F","G","H","J","K","L","ENTER"),listOf("SHIFT","Z","X","C","V","B","N","M",",",".","SHIFT"),listOf("CTRL","FN","ALT","SPACE","ALT","←","↓","↑","→"))
- Column(verticalArrangement=Arrangement.spacedBy(4.dp)){rows.forEach{r->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(3.dp)){r.forEach{k->Surface(color=if(k in listOf("SPACE","ENTER","SHIFT","CTRL","ALT","TAB","BACK"))Color(0xFF315273) else Color(0xFF203A55),shape=RoundedCornerShape(5.dp),modifier=Modifier.weight(if(k=="SPACE")2.7f else if(k.length>1)1.25f else 1f).height(35.dp).clickable{onKey(when(k){"BACK"->"BACK";"SPACE"->"SPACE";"ENTER"->"ENTER";else->if(k.length==1)k.lowercase() else ""})}){Box(contentAlignment=Alignment.Center){Text(k,color=Color.White,fontSize=if(k.length>3)8.sp else 10.sp,fontWeight=FontWeight.SemiBold)}}}}};OutlinedButton(onClick={onKey("CLEAR")},modifier=Modifier.fillMaxWidth()){Text("CLEAR INPUT PREVIEW")} }
+@Composable private fun GenKeyboard(modifierPreview:Set<String>,onKey:(String)->Unit){
+ val rows=listOf(listOf("ESC","1","2","3","4","5","6","7","8","9","0","BACK"),listOf("TAB","Q","W","E","R","T","Y","U","I","O","P"),listOf("CAPS","A","S","D","F","G","H","J","K","L","ENTER"),listOf("SHIFT","Z","X","C","V","B","N","M",",",".","SHIFT"),listOf("CTRL","WIN","FN","ALT","SPACE","ALT","←","↓","↑","→"))
+ Column(verticalArrangement=Arrangement.spacedBy(4.dp)){rows.forEach{r->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(3.dp)){r.forEach{k->Surface(color=if(k in modifierPreview)blue else if(k in listOf("SPACE","ENTER","SHIFT","CTRL","WIN","ALT","TAB","BACK"))Color(0xFF315273) else Color(0xFF203A55),shape=RoundedCornerShape(5.dp),modifier=Modifier.weight(if(k=="SPACE")2.7f else if(k.length>1)1.25f else 1f).height(35.dp).clickable{onKey(when(k){"BACK"->"BACK";"SPACE"->"SPACE";"ENTER"->"ENTER";"CTRL"->"CTRL";"WIN"->"WIN";"ALT"->"ALT";"SHIFT"->"SHIFT";else->if(k.length==1)k.lowercase() else ""})}){Box(contentAlignment=Alignment.Center){Text(k,color=Color.White,fontSize=if(k.length>3)8.sp else 10.sp,fontWeight=FontWeight.SemiBold)}}}}};OutlinedButton(onClick={onKey("CLEAR")},modifier=Modifier.fillMaxWidth()){Text("CLEAR INPUT PREVIEW")} }
 }
