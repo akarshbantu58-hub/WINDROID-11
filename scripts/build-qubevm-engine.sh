@@ -6,7 +6,7 @@ QUBE="$ROOT/third_party/QubeVM"
 JNI="$QUBE/qube-android-lib/src/main/jni"
 NDK="${ANDROID_NDK_HOME:-${ANDROID_HOME}/ndk/30.0.16248370}"
 
-if [[ ! -d "$QUBE/.git" || ! -f "$QUBE/README.developers" ]]; then
+if [[ ! -e "$QUBE/.git" || ! -f "$QUBE/README.developers" ]]; then
   echo "QubeVM submodule is missing. Run checkout with submodules: recursive." >&2
   exit 2
 fi
