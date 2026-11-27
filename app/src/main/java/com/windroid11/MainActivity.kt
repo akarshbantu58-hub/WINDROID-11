@@ -113,7 +113,7 @@ fun Windroid() {
    Text("WIN DROID 11  •  ANDROID HOST",color=Color(0xFF6F8CA9),fontSize=9.sp,modifier=Modifier.align(Alignment.CenterHorizontally).padding(9.dp))
   }
   if (keyboardExpanded && keyboardEnabled) {
-   Surface(modifier=Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal=8.dp,bottom=78.dp),color=Color(0xF0142941),shape=RoundedCornerShape(18.dp),shadowElevation=12.dp) {
+   Surface(modifier=Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start=8.dp,end=8.dp,bottom=78.dp),color=Color(0xF0142941),shape=RoundedCornerShape(18.dp),shadowElevation=12.dp) {
     Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(7.dp)) {
      Row(verticalAlignment=Alignment.CenterVertically) {
       Text("GEN-PC KEYBOARD",color=blue,fontSize=10.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
