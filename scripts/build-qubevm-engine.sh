@@ -115,6 +115,21 @@ PY
   touch virglrenderer/.qube-patch-applied
 fi
 
+# QubeVM's Makefile uses the older virglrenderer Meson option name.
+# The pinned virglrenderer 1.3.0 source uses render-server-worker.
+python3 - <<'PY'
+from pathlib import Path
+p = Path("Makefile")
+s = p.read_text()
+old = "-Drender-server-mode=thread"
+new = "-Drender-server-worker=thread"
+if old in s:
+    s = s.replace(old, new, 1)
+elif new not in s:
+    raise SystemExit("Cannot find QubeVM virgl render-server option")
+p.write_text(s)
+PY
+
 make qube
 
 LIBDIR="$QUBE/qube-android-lib/src/main/jniLibs/arm64-v8a"
