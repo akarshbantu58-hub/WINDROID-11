@@ -131,6 +131,8 @@ fun Windroid() {
  }
 }
 
+}
+
 @Composable private fun InfoCard(title:String,subtitle:String,content:@Composable ColumnScope.()->Unit) {
  Card(colors=CardDefaults.cardColors(containerColor=panel),shape=RoundedCornerShape(18.dp)){Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(9.dp)){Text(title,color=blue,fontSize=11.sp,fontWeight=FontWeight.Bold,letterSpacing=1.sp);Text(subtitle,color=Color.White,fontSize=13.sp);content()}}
 }
