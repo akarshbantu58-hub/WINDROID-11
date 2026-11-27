@@ -42,7 +42,7 @@ fetch_extract() {
 # Versions and patches are pinned to the QubeVM source revision recorded in this repo.
 fetch_extract "https://download.qemu.org/qemu-11.1.3.tar.xz" "qemu-11.1.3.tar.xz" "qemu"
 if [[ ! -d glib ]]; then
-  fetch_extract "https://download.gnome.org/sources/glib/2.90/glib-2.90.1.tar.xz" "glib-2.90.1.tar.xz" "glib-2.90.1"
+  fetch_extract "https://download.gnome.org/sources/glib/2.88/glib-2.90.1.tar.xz" "glib-2.90.1.tar.xz" "glib-2.90.1"
   mv glib-2.90.1 glib
 fi
 fetch_extract "https://github.com/libffi/libffi/releases/download/v3.8.0/libffi-3.8.0.tar.gz" "libffi-3.8.0.tar.gz" "libffi-3.8.0"
@@ -74,7 +74,7 @@ apply_once() {
 }
 apply_once qemu/.qube-patch-applied qemu ../patches/qemu-11.1.3.patch
 apply_once glib/.qube-patch-applied glib ../patches/glib-2.90.1.patch
-apply_once qemu/subprojects/libslirp/.qube-patch-applied qemu/subprojects/libslirp ../../patches/libslirp-4.9.5.patch
+apply_once qemu/subprojects/libslirp/.qube-patch-applied qemu/subprojects/libslirp ../../../patches/libslirp-4.9.5.patch
 apply_once virglrenderer/.qube-patch-applied virglrenderer ../patches/virglrenderer-1.3.0-android-egl.patch
 
 make qube
