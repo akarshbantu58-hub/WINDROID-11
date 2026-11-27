@@ -1,0 +1,44 @@
+name: Build QubeVM native engine
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  native-engine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout WinDroid and pinned QubeVM source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Android SDK and NDK r30
+        uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: false
+          packages: 'platforms;android-37 build-tools;37.0.0 ndk;30.0.16248370'
+      - name: Install QEMU native build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make autoconf automake git python3 python3-pip binutils libtool-bin flex bison gettext texinfo rsync gtk-doc-tools ninja-build unzip curl pkg-config
+          python3 -m pip install --break-system-packages --upgrade meson mako
+      - name: Build QubeVM QEMU engine for ARM64 Android
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/30.0.16248370
+          BUILD_THREADS: '2'
+        run: bash scripts/build-qubevm-engine.sh
+      - name: Upload native engine and firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: QubeVM-arm64-x86_64-engine
+          if-no-files-found: error
+          path: |
+            third_party/QubeVM/qube-android-lib/src/main/jniLibs/arm64-v8a/*.so
+            third_party/QubeVM/qube-android-x86/src/main/jniLibs/arm64-v8a/*.so
+            third_party/QubeVM/qube-android-x86/src/main/assets/roms/**
