@@ -55,7 +55,6 @@ fi
 if [[ ! -d pixman ]]; then
   fetch_extract "https://gitlab.freedesktop.org/pixman/pixman/-/archive/pixman-0.46.4/pixman-pixman-0.46.4.tar.gz" "pixman-0.46.4.tar.gz" "pixman-pixman-0.46.4"
   mv pixman-pixman-0.46.4 pixman
-  (cd pixman && bash autogen.sh)
 fi
 if [[ ! -d qemu/subprojects/libslirp ]]; then
   fetch_extract "https://gitlab.freedesktop.org/slirp/libslirp/-/archive/v4.9.5/libslirp-v4.9.5.zip" "libslirp-4.9.5.zip" "libslirp-4.9.5"
