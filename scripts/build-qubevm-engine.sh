@@ -105,11 +105,10 @@ else
 endif""", 1)
 if "epoxy_dep = declare_dependency(" not in s:
     raise SystemExit("Android epoxy dependency adaptation was not applied")
-old_vtest = "if not with_host_windows\n   subdir('vtest')"
-new_vtest = "if not with_host_windows and not with_host_android\n   subdir('vtest')"
-if old_vtest in s:
-    s = s.replace(old_vtest, new_vtest, 1)
-if new_vtest not in s:
+import re
+s, count = re.subn(r"if not with_host_windows\s*\n(\s*)subdir\('vtest'\)",
+                    r"if not with_host_windows and not with_host_android\n\1subdir('vtest')", s, count=1)
+if count != 1 and "if not with_host_windows and not with_host_android" not in s:
     raise SystemExit("Android vtest exclusion was not applied")
 p.write_text(s)
 PY
