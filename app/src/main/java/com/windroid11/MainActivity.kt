@@ -1,6 +1,7 @@
 package com.windroid11
 
 import android.content.Intent
+import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
@@ -29,6 +30,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private val bg = Color(0xFF081321)
 private val panel = Color(0xFF142941)
@@ -46,6 +50,8 @@ fun Windroid() {
  var uri by remember { mutableStateOf(prefs.getString("windows_iso_uri", null)?.let(Uri::parse)) }
  var fileName by remember { mutableStateOf(prefs.getString("windows_iso_name", "No ISO selected") ?: "No ISO selected") }
  var fileSize by remember { mutableStateOf(prefs.getString("windows_iso_size", "") ?: "") }
+ var architectureStatus by remember { mutableStateOf("Not checked") }
+ val scope = rememberCoroutineScope()
  var notice by remember { mutableStateOf("Choose your Windows 11 ARM64 ISO now or later.") }
  var tab by remember { mutableStateOf("Home") }
  var keyboardEnabled by remember { mutableStateOf(true) }
@@ -70,7 +76,7 @@ fun Windroid() {
     if(c.moveToFirst()){ if(ni>=0)n=c.getString(ni)?:n; if(si>=0&&!c.isNull(si))s=String.format("%.2f GB",c.getLong(si)/1073741824.0) }
    }
    if(!n.lowercase().endsWith(".iso")) notice="Please select a .iso file."
-   else { uri=u; fileName=n; fileSize=s; prefs.edit().putString("windows_iso_uri",u.toString()).putString("windows_iso_name",n).putString("windows_iso_size",s).apply(); notice="ISO reference saved. VM engine is still required before installation." }
+   else { uri=u; fileName=n; fileSize=s; architectureStatus="Not checked"; prefs.edit().putString("windows_iso_uri",u.toString()).putString("windows_iso_name",n).putString("windows_iso_size",s).apply(); notice="ISO reference saved. Run architecture detection before VM setup." }
   } catch (_:Exception) { notice="Could not save file access. Please select it again." }
  }
 
@@ -90,7 +96,7 @@ fun Windroid() {
     "Home" -> LazyColumn(Modifier.weight(1f).padding(16.dp),verticalArrangement=Arrangement.spacedBy(13.dp)) {
      item { Card(colors=CardDefaults.cardColors(containerColor=Color(0xFF1B3B5A)),shape=RoundedCornerShape(22.dp)){ Column(Modifier.padding(20.dp)){ Text("YOUR PC. REIMAGINED.",color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Bold); Text("A touchscreen-first Windows ARM64 virtual machine.",color=muted,fontSize=12.sp); Spacer(Modifier.height(12.dp)); Text("GEN-PC KEYBOARD  •  VIRTUAL MOUSE  •  PC SETTINGS",color=blue,fontSize=10.sp) } } }
      item { InfoCard("PC POWER", "QEMU engine is not packaged in this build yet.") { Button(onClick={notice=if(uri==null) "Choose your Windows ISO first." else "ISO saved: $fileName. QEMU native engine is not yet packaged, so Windows cannot boot in this build."},modifier=Modifier.fillMaxWidth(),enabled=uri!=null){Text("BOOT PC")} ; Text("Boot will activate after QEMU, firmware and the ISO architecture are integrated and tested.",color=muted,fontSize=10.sp) } }
-     item { InfoCard("WINDOWS 11 ARM64 ISO",fileName+(if(fileSize.isNotBlank())"  •  $fileSize" else "")){ Button(onClick={filePicker.launch(arrayOf("application/octet-stream","application/x-iso9660-image","*/*"))},modifier=Modifier.fillMaxWidth()){Text(if(uri==null)"Choose ISO file" else "Change ISO file")} ; Text(notice,color=Color(0xFFFFD28B),fontSize=11.sp); Text("File is linked, not copied into internal storage. Add it later when ready.",color=muted,fontSize=10.sp) } }
+     item { InfoCard("WINDOWS ISO",fileName+(if(fileSize.isNotBlank())"  •  $fileSize" else "")){ Button(onClick={filePicker.launch(arrayOf("application/octet-stream","application/x-iso9660-image","*/*"))},modifier=Modifier.fillMaxWidth()){Text(if(uri==null)"Choose ISO file" else "Change ISO file")} ; Button(onClick={ val selected=uri; if(selected==null) architectureStatus="Choose an ISO first." else { architectureStatus="Scanning ISO boot files…"; scope.launch { architectureStatus=withContext(Dispatchers.IO) { IsoArchitectureDetector.detect(ctx,selected) } } } },modifier=Modifier.fillMaxWidth(),enabled=uri!=null){Text("DETECT ISO ARCHITECTURE")} ; Text("Architecture: $architectureStatus",color=blue,fontSize=12.sp); Text(notice,color=Color(0xFFFFD28B),fontSize=11.sp); Text("Detection checks EFI boot-loader names in the ISO. Unknown means the image needs deeper inspection.",color=muted,fontSize=10.sp) } }
      item { InfoCard("SYSTEM STATUS","App interface: READY\nISO: "+if(uri==null)"NOT ADDED" else "LINKED"+"\nQEMU engine: NOT INTEGRATED\nWindows VM: NOT STARTED") { } }
      item { Text("The mouse, keyboard and settings screens are prepared as UI. They will control Windows after the QEMU input bridge is implemented.",color=muted,fontSize=11.sp) }
     }
