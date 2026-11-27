@@ -110,7 +110,6 @@ fun Windroid() {
      item { InfoCard("ABOUT","WinDroid 11 • UI foundation\nISO picker • Mouse UI • Gen-PC keyboard • Settings\nQEMU engine and Windows boot are not implemented yet."){} }
     }
    }
-   }
    Text("WIN DROID 11  •  ANDROID HOST",color=Color(0xFF6F8CA9),fontSize=9.sp,modifier=Modifier.align(Alignment.CenterHorizontally).padding(9.dp))
   }
   if (keyboardExpanded && keyboardEnabled) {
