@@ -99,7 +99,7 @@ if old_dep in s:
   epoxy_dep = declare_dependency(
     compile_args: [],
     link_args: ['-lepoxy'],
-    version: '1.5.10')
+    version: '1.5.10',\n    variables: {'epoxy_has_egl': '1'})
 else
   epoxy_dep = dependency('epoxy', version: '>= 1.5.4')
 endif""", 1)
