@@ -1,35 +1,46 @@
-# WinDroid 11 — VM backend preparation
+# WinDroid 11 — Android virtual machine project
 
-## Current milestone
+WinDroid 11 is a touchscreen-first Android front end for running guest operating systems in a virtual machine.
 
-The Android app currently provides the touchscreen-first UI, persistent document-picker access to a selected ISO, a floating expandable keyboard preview, and a touchpad pointer preview.
+## Current implementation status
 
-**Important:** the current app does not include QEMU, UEFI firmware, a virtual disk controller, or a running Windows guest. The keyboard and mouse are not yet connected to a guest OS. The VM configuration class is only a typed configuration model.
+The app currently contains the Compose interface, persistent ISO document selection, a floating keyboard/touchpad preview, an ISO EFI boot-loader scanner, and a small JNI bridge build target.
 
-## Five development milestones
+**The QEMU engine is not yet wired into the app's Boot PC action.** The QubeVM source is included as a pinned Git submodule for the next integration work. A successful APK build at this stage proves only that the Android shell and its current native bridge compile; it does not prove that Windows boots.
 
-1. **Stabilize Android shell** — verify Compose build, persistent ISO URI access, floating keyboard overlay, and touchpad layout.
-2. **Validate guest image** — identify whether the supplied ISO is Windows ARM64 or x64. A 3 GB file size does not reveal its CPU architecture. Windows ARM64 requires an ARM64 guest path; x64 requires a different emulation path.
-3. **Select and integrate an Android-compatible VM engine** — evaluate QEMU user-mode/TCG and available host acceleration. Do not assume KVM is available on every Android device. Keep engine licensing and native ABI requirements documented.
-4. **Create VM storage and firmware layer** — implement a user-selected virtual disk location, firmware boot configuration, and safe start/stop lifecycle. Do not silently create a large disk in internal storage.
-5. **Connect input and display** — route keyboard scan/key events and touchpad pointer/button events to the VM; then test guest display scaling and lifecycle.
+## QEMU engine source
 
-## Tablet resource limits
+WinDroid includes [QubeVM](https://github.com/rhn-1k/QubeVM) as a Git submodule at `third_party/QubeVM`, pinned to commit `979d638e5d57ed0c01c4781957ddac5e9697e970`.
 
-This project targets Android tablets with limited memory. Start with a conservative 1 GB guest-memory test only if the engine and Windows image permit it. A 1.5–2 GB Windows guest on a 4 GB Android device can cause severe memory pressure, slowdowns, or app termination. The settings screen currently saves preferences only; it does not reserve RAM.
+QubeVM is a QEMU-based Android VM project licensed under GPL-3.0. Its developer guide documents the Android ARM64 host build, guest-specific QEMU system libraries, native dependency builds, and Android modules. Read:
+- `third_party/QubeVM/README.md`
+- `third_party/QubeVM/README.developers`
+- `third_party/QubeVM/COPYING`
 
-## ISO and storage
+The QubeVM build guide currently calls for Android SDK 37, NDK r30, JDK 17, Meson/Ninja, and a Linux build environment. It also describes building an ARM64 Android host with an x86_64 guest target. The existing WinDroid app uses a different Gradle/Android plugin setup, so the QubeVM modules and native libraries still need to be adapted and built before they can be called from the app.
 
-Use Android's Storage Access Framework document URI. Keep the original ISO in user-selected external/shared storage when possible; do not copy it into app-private storage. Persisted URI permission can be revoked by Android or the user, so handle missing access gracefully.
+## Build
 
-## Current status
+Clone with submodules:
 
-- [x] Touchscreen UI foundation
-- [x] Persistent ISO file selection reference
-- [x] Floating expandable on-screen keyboard preview
-- [x] Touchpad pointer preview
-- [x] VM configuration data model
-- [ ] QEMU/native VM engine
-- [ ] Firmware and virtual disk
-- [ ] Real guest input bridge
-- [ ] Windows boot/install verification
+```bash
+git clone --recurse-submodules https://github.com/akarshbantu58-hub/WINDROID-11.git
+```
+
+GitHub Actions checks out the QubeVM submodule. The current APK build remains a shell/bridge build, not a Windows VM release.
+
+## Planned engine integration checks
+
+1. Build QubeVM's ARM64-host x86_64 guest native libraries in CI using its documented toolchain.
+2. Integrate the required QubeVM Android library and x86 guest module into WinDroid, resolving Android Gradle Plugin/SDK compatibility.
+3. Replace the placeholder JNI status bridge with QubeVM's real VM lifecycle and display/input interfaces.
+4. Test an x86_64 Linux guest first, then test the supplied Windows ISO and confirm firmware, storage, display, and keyboard/touch input.
+5. Publish the exact corresponding source and notices with every distributed APK.
+
+## Device constraints
+
+The target Galaxy Tab A9 has 4 GB RAM. Stock Android generally does not expose `/dev/kvm` to apps, so expect software TCG emulation unless device-specific acceleration is verified. x86_64 Windows emulation may be very slow and can run out of memory. Start with a small test guest before attempting Windows.
+
+## Licensing
+
+WinDroid's combined project is intended to be distributed under GPL-3.0 when QubeVM code is integrated. QubeVM's complete license text and original notices are retained in the submodule at `third_party/QubeVM/COPYING`. Other QubeVM dependencies retain their own licenses; see their source directories and notices.

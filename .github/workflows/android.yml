@@ -8,8 +8,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout WinDroid and QubeVM source
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Verify pinned QubeVM source and license
+        run: |
+          test -f third_party/QubeVM/README.developers
+          test -f third_party/QubeVM/COPYING
+          git -C third_party/QubeVM rev-parse HEAD
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
