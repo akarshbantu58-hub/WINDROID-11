@@ -2,6 +2,11 @@ name: Build QubeVM native engine
 on:
   workflow_dispatch:
   workflow_call:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/qemu-engine.yml'
+      - 'scripts/build-qubevm-engine.sh'
 
 jobs:
   native-engine:
