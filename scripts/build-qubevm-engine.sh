@@ -79,7 +79,42 @@ apply_once() {
 apply_once qemu/.qube-patch-applied qemu ../patches/qemu-11.1.3.patch
 apply_once glib/.qube-patch-applied glib ../patches/glib-2.90.1.patch
 apply_once qemu/subprojects/libslirp/.qube-patch-applied qemu/subprojects/libslirp ../../../patches/libslirp-4.9.5.patch
-apply_once virglrenderer/.qube-patch-applied virglrenderer ../patches/virglrenderer-1.3.0-android-egl.patch
+# The upstream 1.3.0 tag has small Meson differences from the
+# patch's original context. Apply all matching patch hunks, then enforce
+# the two Android-specific Meson edits against the pinned 1.3.0 source.
+if [[ ! -f virglrenderer/.qube-patch-applied ]]; then
+  (cd virglrenderer && patch --batch --forward -p1 < ../patches/virglrenderer-1.3.0-android-egl.patch) || true
+  python3 - <<'PY'
+from pathlib import Path
+p = Path("virglrenderer/meson.build")
+s = p.read_text()
+if "with_host_android =" not in s:
+    needle = "with_host_darwin = host_machine.system() == 'darwin'"
+    if needle not in s:
+        raise SystemExit("Cannot locate virglrenderer host OS declarations")
+    s = s.replace(needle, needle + "\nwith_host_android = host_machine.system() == 'android'", 1)
+old_dep = "epoxy_dep = dependency('epoxy', version: '>= 1.5.4')"
+if old_dep in s:
+    s = s.replace(old_dep, """if with_host_android
+  epoxy_dep = declare_dependency(
+    compile_args: [],
+    link_args: ['-lepoxy'],
+    version: '1.5.10')
+else
+  epoxy_dep = dependency('epoxy', version: '>= 1.5.4')
+endif""", 1)
+if "epoxy_dep = declare_dependency(" not in s:
+    raise SystemExit("Android epoxy dependency adaptation was not applied")
+old_vtest = "if not with_host_windows\n   subdir('vtest')"
+new_vtest = "if not with_host_windows and not with_host_android\n   subdir('vtest')"
+if old_vtest in s:
+    s = s.replace(old_vtest, new_vtest, 1)
+if new_vtest not in s:
+    raise SystemExit("Android vtest exclusion was not applied")
+p.write_text(s)
+PY
+  touch virglrenderer/.qube-patch-applied
+fi
 
 make qube
 
