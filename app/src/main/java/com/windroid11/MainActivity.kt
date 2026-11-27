@@ -110,6 +110,7 @@ fun Windroid() {
      item { InfoCard("ABOUT","WinDroid 11 • UI foundation\nISO picker • Mouse UI • Gen-PC keyboard • Settings\nQEMU engine and Windows boot are not implemented yet."){} }
     }
    }
+   }
    Text("WIN DROID 11  •  ANDROID HOST",color=Color(0xFF6F8CA9),fontSize=9.sp,modifier=Modifier.align(Alignment.CenterHorizontally).padding(9.dp))
   }
   if (keyboardExpanded && keyboardEnabled) {
@@ -137,7 +138,7 @@ fun Windroid() {
 @Composable private fun Toggle(title:String,sub:String,value:Boolean,onChange:(Boolean)->Unit){InfoCard(title,sub){Switch(value,onChange)}}
 @Composable private fun TouchPad(){
  var p by remember{mutableStateOf(androidx.compose.ui.geometry.Offset(.5f,.5f))}
- BoxWithConstraints(Modifier.fillMaxWidth().height(170.dp).background(bg,RoundedCornerShape(14.dp)).pointerInput(Unit){detectDragGestures{change,drag->change.consume();p=androidx.compose.ui.geometry.Offset((p.x+drag.x/constraints.maxWidth).coerceIn(.05f,.95f),(p.y+drag.y/constraints.maxHeight).coerceIn(.08f,.92f))}}){
+ BoxWithConstraints(Modifier.fillMaxWidth().height(170.dp).background(bg,RoundedCornerShape(14.dp)).pointerInput(Unit){detectDragGestures{change,drag->change.consume();p=androidx.compose.ui.geometry.Offset((p.x+drag.x/size.width.toFloat()).coerceIn(.05f,.95f),(p.y+drag.y/size.height.toFloat()).coerceIn(.08f,.92f))}}){
   Text("DRAG TO MOVE",color=muted,fontSize=10.sp,modifier=Modifier.align(Alignment.TopCenter).padding(10.dp))
   Box(Modifier.offset(x=maxWidth*p.x-8.dp,y=maxHeight*p.y-8.dp).size(16.dp).background(blue,RoundedCornerShape(50)))
   Text("TRACKPAD AREA",color=Color(0xFF58728E),fontSize=9.sp,modifier=Modifier.align(Alignment.BottomCenter).padding(8.dp))
